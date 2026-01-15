@@ -3,37 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2026 个人所得税计算器</title>
+    <title>2026 视觉化个税计算器</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { background-color: #f4f7f6; font-family: "Microsoft YaHei", sans-serif; }
-        .card { box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+        body { background-color: #f0f4f8; font-family: "Microsoft YaHei", sans-serif; }
+        .card { box-shadow: 0 20px 50px rgba(0,0,0,0.1); border-radius: 2rem; }
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen p-4">
+<body class="flex items-center justify-center min-h-screen p-6">
 
-    <div class="card bg-white rounded-3xl p-8 w-full max-w-md">
-        <h1 class="text-3xl font-bold text-center text-gray-800 mb-8">个税计算器 (2026)</h1>
+    <div class="card bg-white p-10 w-full max-w-2xl">
+        <h1 class="text-4xl font-black text-center text-gray-800 mb-10">2026 个人所得税计算器</h1>
         
-        <div class="mb-6">
-            <label class="block text-xl text-gray-600 mb-2">月薪总额 (元)</label>
-            <input type="number" id="salary" placeholder="请输入您的月薪" 
-                   class="w-full text-3xl font-semibold border-b-4 border-green-500 focus:outline-none py-2 text-center text-green-600">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+            <div class="flex flex-col justify-center">
+                <div class="mb-8">
+                    <label class="block text-2xl text-gray-500 mb-3">月薪总额 (RMB)</label>
+                    <input type="number" id="salary" placeholder="请输入月薪" 
+                           class="w-full text-4xl font-bold border-b-4 border-blue-500 focus:outline-none py-2 text-blue-600 bg-transparent">
+                </div>
+
+                <div class="space-y-6">
+                    <div class="p-4 bg-red-50 rounded-xl">
+                        <span class="block text-lg text-red-400">预估个税</span>
+                        <span id="tax-result" class="text-3xl font-bold text-red-600">￥0.00</span>
+                    </div>
+                    <div class="p-4 bg-blue-50 rounded-xl">
+                        <span class="block text-lg text-blue-400">实发到手</span>
+                        <span id="after-tax" class="text-4xl font-bold text-blue-700">￥0.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-center">
+                <div style="width: 300px; height: 300px;">
+                    <canvas id="taxChart"></canvas>
+                </div>
+            </div>
         </div>
 
-        <div class="space-y-4 bg-green-50 rounded-2xl p-6">
-            <div class="flex justify-between items-center">
-                <span class="text-xl text-gray-500">应交税额</span>
-                <span id="tax-result" class="text-2xl font-bold text-red-500">￥0.00</span>
-            </div>
-            <div class="flex justify-between items-center border-t border-green-100 pt-4">
-                <span class="text-xl text-gray-700">税后到手</span>
-                <span id="after-tax" class="text-3xl font-bold text-green-700">￥0.00</span>
-            </div>
-        </div>
-
-        <p class="text-gray-400 text-sm mt-6 text-center">
-            * 计算基于起征点 5000 元，暂未计算五险一金和专项附加扣除
+        <p class="text-gray-400 text-sm mt-10 text-center italic">
+            * 提示：本工具仅计算起征点5000元后的个税，未含专项扣除。
         </p>
     </div>
 
@@ -41,6 +52,25 @@
         const salaryInput = document.getElementById('salary');
         const taxLabel = document.getElementById('tax-result');
         const afterTaxLabel = document.getElementById('after-tax');
+        const ctx = document.getElementById('taxChart').getContext('2d');
+
+        // 初始化饼图
+        let taxChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['到手收入', '缴纳个税'],
+                datasets: [{
+                    data: [100, 0],
+                    backgroundColor: ['#3b82f6', '#ef4444'],
+                    borderWidth: 0,
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                plugins: { legend: { position: 'bottom', labels: { font: { size: 16 } } } },
+                cutout: '70%'
+            }
+        });
 
         salaryInput.addEventListener('input', () => {
             const salary = parseFloat(salaryInput.value) || 0;
@@ -57,8 +87,17 @@
                 else tax = taxableIncome * 0.45 - 15160;
             }
 
-            taxLabel.innerText = `￥${tax.toLocaleString('zh-CN', {minimumFractionDigits: 2})}`;
-            afterTaxLabel.innerText = `￥${(salary - tax).toLocaleString('zh-CN', {minimumFractionDigits: 2})}`;
+            const afterTax = salary - tax;
+
+            // 更新文字
+            taxLabel.innerText = `￥${tax.toLocaleString()}`;
+            afterTaxLabel.innerText = `￥${afterTax.toLocaleString()}`;
+
+            // 更新图表
+            if (salary > 0) {
+                taxChart.data.datasets[0].data = [afterTax, tax];
+                taxChart.update();
+            }
         });
     </script>
 </body>
